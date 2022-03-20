@@ -2,7 +2,8 @@ package com.nowconder.community;
 
 import com.nowconder.community.dao.AlphaDao;
 import com.nowconder.community.service.AlphaService;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+//import org.junit.jupiter.api.Test;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -26,6 +27,7 @@ class CommunityApplicationTests implements ApplicationContextAware {
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.applicationContext = applicationContext;
 	}
+
 
 	@Test
 	public void testApplicatiuonContext(){

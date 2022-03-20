@@ -1,11 +1,10 @@
 package com.nowconder.community.controller;
 
-import com.nowconder.community.entity.Comment;
-import com.nowconder.community.entity.DiscussPost;
-import com.nowconder.community.entity.Page;
-import com.nowconder.community.entity.User;
+import com.nowconder.community.entity.*;
+import com.nowconder.community.event.EventProducer;
 import com.nowconder.community.service.CommentService;
 import com.nowconder.community.service.DiscussPostService;
+import com.nowconder.community.service.LikeService;
 import com.nowconder.community.service.UserService;
 import com.nowconder.community.util.CommunityConstant;
 import com.nowconder.community.util.CommunityUtil;
@@ -25,7 +24,7 @@ import static com.nowconder.community.util.CommunityConstant.ENTITY_TYPE_POST;
 
 @Controller
 @RequestMapping(path = "/discuss")
-public class DiscussPostController {
+public class DiscussPostController implements CommunityConstant{
 
     @Autowired
     private DiscussPostService discussPostService;
@@ -38,6 +37,12 @@ public class DiscussPostController {
 
     @Autowired
     private CommentService commentService;
+
+    @Autowired
+    private LikeService likeService;
+
+    @Autowired
+    private EventProducer eventProducer;
 
     @RequestMapping(path = "/add", method = RequestMethod.POST)
     @ResponseBody
@@ -54,6 +59,14 @@ public class DiscussPostController {
         post.setCreateTime(new Date());
         discussPostService.addDiscussPost(post);
 
+        // 触发发帖事件
+        Event event = new Event()
+                .setTopic(TOPIC_PUBLISH)
+                .setUserId(user.getId())
+                .setEntityType(ENTITY_TYPE_POST)
+                .setEntityId(post.getId());
+        eventProducer.fireEvent(event);
+
         return CommunityUtil.getJSONString(0, "发布成功！");
     }
 
@@ -65,6 +78,12 @@ public class DiscussPostController {
         // 查询作者
         User user = userService.findUserById(post.getUserId());
         model.addAttribute("user",user);
+        // 点赞
+        long likeCount = likeService.findEntityLikeCount(ENTITY_TYPE_POST, discussPostId);
+        model.addAttribute("likeCount",likeCount);
+        // 点赞状态
+        int likeStatus = hostHolder.getUser()==null?0:likeService.findEntityLikeStatus(hostHolder.getUser().getId(), ENTITY_TYPE_POST, discussPostId);
+        model.addAttribute("likeStatus", likeStatus);
 
         // 设置帖子的评论分页信息
         page.setLimit(5);
@@ -84,6 +103,12 @@ public class DiscussPostController {
                 commentVo.put("comment",comment);
                 // 获取发表评论的用户
                 commentVo.put("user",userService.findUserById(comment.getUserId()));
+                // 点赞
+                likeCount = likeService.findEntityLikeCount(ENTITY_TYPE_COMMENT, comment.getId());
+                commentVo.put("likeCount",likeCount);
+                // 点赞状态
+                likeStatus = hostHolder.getUser()==null?0:likeService.findEntityLikeStatus(hostHolder.getUser().getId(), ENTITY_TYPE_COMMENT, comment.getId());
+                commentVo.put("likeStatus", likeStatus);
                 // 获取评论的回复——回复列表
                 List<Comment> replyList = commentService.findCommentsByEntity(ENTITY_TYPE_COMMENT, comment.getId(),0 ,Integer.MAX_VALUE);
                 // 回复的Vo列表
@@ -98,6 +123,12 @@ public class DiscussPostController {
                         // 获取回复的目标
                         User target = reply.getTargetId() == 0? null:userService.findUserById(reply.getTargetId());
                         replyVo.put("target",target);
+                        // 点赞
+                        likeCount = likeService.findEntityLikeCount(ENTITY_TYPE_COMMENT, reply.getId());
+                        replyVo.put("likeCount",likeCount);
+                        // 点赞状态
+                        likeStatus = hostHolder.getUser()==null?0:likeService.findEntityLikeStatus(hostHolder.getUser().getId(), ENTITY_TYPE_COMMENT, reply.getId());
+                        replyVo.put("likeStatus", likeStatus);
 
                         replyVoList.add(replyVo);
                     }
